@@ -9,7 +9,6 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     MAX_LOGIN_ATTEMPTS: int = 5
     LOCKOUT_MINUTES: int = 60
-    REDIS_URL: str
     
     class Config:
         env_file = ".env"

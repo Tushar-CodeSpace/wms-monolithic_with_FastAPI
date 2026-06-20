@@ -11,10 +11,12 @@ from app.config import settings
 from app.repositories.auth_repository import AuthRepository
 from app.schemas.auth_schema import RegisterRequest, RegisterResponse, LoginRequest, LoginResponse
 from app.schemas.user_schema import UserSchema
+from app.repositories.cache_repository import cache_repository
 
 class AuthService:
     def __init__(self):
         self.repository = AuthRepository()
+        self.cache_repository = cache_repository
 
     def _hash_password(self, password: str) -> str:
         salt = bcrypt.gensalt(rounds=settings.BCRYPT_ROUNDS)
@@ -53,7 +55,7 @@ class AuthService:
                 detail="Email already exists"
             )
 
-        token = self._create_token(user_id)
+        token, token_id = self._create_token(user_id)
 
         return RegisterResponse(user_id=user.id, token=token)
 
@@ -100,8 +102,33 @@ class AuthService:
         # 5. Success path: Reset bad markers and sign JWT tokens
         await self.repository.reset_login_attempts(email_clean)
         
-        token = self._create_token(user["_id"])
+        token, token_id = self._create_token(user["_id"])
         return LoginResponse(user_id=user["_id"], token=token)
 
-    # async def logout(self, token_id: str):
-    #     # Implement JWT blacklisting here
+    async def logout(self, token: str):
+        try:
+            # Decode token without enforcing expiration rules to catch all tokens
+            payload = jwt.decode(
+                token, 
+                settings.JWT_SECRET_KEY, 
+                algorithms=[settings.JWT_ALGORITHM], 
+                options={"verify_exp": False}
+            )
+            token_id = payload.get("jti")
+            exp_timestamp = payload.get("exp")
+
+            if not token_id or not exp_timestamp:
+                raise HTTPException(status_code=400, detail="Invalid token structure")
+
+            # Calculate remaining lifespan
+            now = int(datetime.now(timezone.utc).timestamp())
+            remaining_seconds = exp_timestamp - now
+
+            # If it's still active, blacklist it in our local dictionary
+            if remaining_seconds > 0:
+                await self.cache_repository.blacklist_token(token_id, remaining_seconds)
+
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        return {"message": "Successfully logged out"}

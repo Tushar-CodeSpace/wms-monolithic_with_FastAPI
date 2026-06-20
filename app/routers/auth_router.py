@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, Depends, status, Request, Response, HTTPException
 
 from app.config import settings
 from app.schemas.auth_schema import RegisterRequest, RegisterResponse, LoginRequest, LoginResponse
@@ -57,4 +57,40 @@ async def login_user(
     return LoginResponse(
         user_id=authenticated_user.user_id,
         token=authenticated_user.token
-    )    
+    )
+
+@router.post("/logout")
+async def logout_user(
+    request: Request,
+    response: Response,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    token = None
+    
+    # 1. Try to get token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        
+    # 2. Try to get token from Cookie if header is not present
+    if not token:
+        token_cookie = request.cookies.get("access_token")
+        if token_cookie:
+            token = token_cookie.replace("Bearer ", "") if token_cookie.startswith("Bearer ") else token_cookie
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are not logged in."
+        )
+    
+    await auth_service.logout(token)
+
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        samesite="lax",
+        secure=True
+    )
+    return {"message": "Successfully logged out"}
+    
