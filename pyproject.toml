@@ -1,0 +1,18 @@
+[project]
+name = "wms-monolithicwithfastapi"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.138.0",
+    "passlib>=1.7.4",
+    "pydantic[email]>=2.13.4",
+    "pydantic-settings>=2.14.2",
+    "pymongo>=4.17.0",
+    "uvicorn>=0.49.0",
+    "bcrypt==4.0.1",
+    "tzdata>=2026.2",
+    "motor>=3.7.1",
+    "pyjwt>=2.13.0",
+]

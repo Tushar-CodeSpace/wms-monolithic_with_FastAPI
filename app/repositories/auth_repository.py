@@ -1,0 +1,58 @@
+from app.config import settings
+from app.database import users_collection
+from datetime import datetime, timezone, timedelta
+
+class AuthRepository:
+    async def find_by_email(self, email: str):
+        return await users_collection.find_one({"email": email})
+
+    async def create(self, data: dict):
+        return await users_collection.insert_one(data)
+
+    async def increment_login_attempt(self, email: str) -> dict:
+        """
+        Atomically increments failed attempts. If threshold is met,
+        calculates and assigns the dynamic lockout timestamp.
+        """
+        now = datetime.now(timezone.utc)
+        lockout_duration = timedelta(minutes=settings.LOCKOUT_MINUTES)
+        
+        # We pass an aggregation pipeline inside an update call to dynamically evaluate fields
+        updated_user = await users_collection.find_one_and_update(
+            {"email": email},
+            [
+                {
+                    "$set": {
+                        "failed_login_attempts": {
+                            "$add": [{"$ifNull": ["$failed_login_attempts", 0]}, 1]
+                        },
+                        "last_failed_attempt": now
+                    }
+                },
+                {
+                    "$set": {
+                        "locked_until": {
+                            "$cond": {
+                                "if": {"$gte": ["$failed_login_attempts", settings.MAX_LOGIN_ATTEMPTS]},
+                                "then": now + lockout_duration,
+                                "else": None
+                            }
+                        }
+                    }
+                }
+            ],
+            return_document=True # Crucial: Returns the user state AFTER modifications
+        )
+        return updated_user
+
+    async def reset_login_attempts(self, email: str):
+        await users_collection.update_one(
+            {"email": email},
+            {
+                "$set": {
+                    "failed_login_attempts": 0,
+                    "last_failed_attempt": None,
+                    "locked_until": None
+                }
+            }
+        )
