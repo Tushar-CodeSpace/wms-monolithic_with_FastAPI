@@ -5,33 +5,26 @@ class MemoryCacheRepository:
         self._blacklist = {}
 
     def _cleanup_expired(self):
-        # Internal helper to remove stale tokens and prevent memory leaks
+        """Removes stale tokens from RAM to prevent memory leak degradation."""
         now = datetime.now(timezone.utc).timestamp()
-        # Find all keys that have already expired
         expired_keys = [k for k, exp in self._blacklist.items() if now >= exp]
         for k in expired_keys:
             del self._blacklist[k]
 
     async def blacklist_token(self, token_id: str, expire_seconds: int):
-        # Stores the token ID with its absolute expiration timestamp
+        """Stores token identifiers linked to absolute epoch deadlines."""
         self._cleanup_expired()
-
         now = datetime.now(timezone.utc).timestamp()
-        absolute_expiry = now + expire_seconds
-        
-        # Store it in memory
-        self._blacklist[token_id] = absolute_expiry
+        self._blacklist[token_id] = now + expire_seconds
 
     async def is_token_blacklisted(self, token_id: str) -> bool:
-        # Checks if the token ID exists and hasn't expired yet.
+        """Evaluates whether the token is blocked or dead."""
         self._cleanup_expired()
-        
         if token_id in self._blacklist:
             now = datetime.now(timezone.utc).timestamp()
-            # If it's in the dictionary and hasn't expired, it is blacklisted
             if now < self._blacklist[token_id]:
                 return True
         return False
 
-# Instantiate a single global instance of this cache (Singleton Pattern)
+# Single global instance shared across all requests
 cache_repository = MemoryCacheRepository()
