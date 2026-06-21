@@ -12,7 +12,7 @@ class UserSchema(BaseModel):
     name: str
     email: str
     password_hash: str
-    role: List[str] = Field(default=["user"])
+    roles: List[str] = Field(default=["user"])
     permissions: List[str] = Field(default=[])
     is_active: bool = True
     is_account_verified: bool = False

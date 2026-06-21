@@ -6,6 +6,9 @@ class AuthRepository:
     async def find_by_email(self, email: str):
         return await users_collection.find_one({"email": email})
 
+    async def find_by_id(self, user_id: str):
+        return await users_collection.find_one({"_id": user_id})
+
     async def create(self, data: dict):
         return await users_collection.insert_one(data)
 
@@ -49,10 +52,41 @@ class AuthRepository:
         await users_collection.update_one(
             {"email": email},
             {
-                "$set": {
+                "$set":{
                     "failed_login_attempts": 0,
                     "last_failed_attempt": None,
-                    "locked_until": None
+                    "locked_until": None,
+                    "is_active": True,
+                    "last_login_at": datetime.now(timezone.utc)
                 }
             }
         )
+
+    async def deactivate_user_session(self, user_id: str):
+        # sets the user's is_active flag to False
+        await users_collection.update_one(
+            {"_id": user_id},
+            {"$set":{
+                    "is_active": False
+                }
+            }
+        )
+
+    async def save_refresh_token(self, user_id: str, refresh_token: str):
+        # Save a valid refresh token string to the user profile.
+        await users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "refresh_token": refresh_token
+            }}
+        )
+
+    async def revoke_refresh_token(self, user_id: str):
+        # Remove the refresh token upon logout or breach suspicion.
+        await users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "refresh_token": None
+            }}
+        )
+

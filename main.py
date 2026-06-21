@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from app.database import init_db
 from app.routers.auth_router import router as AuthRouter
+from app.routers.inventory_router import router as InventoryRouter
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,6 +23,12 @@ app.include_router(
     AuthRouter,
     prefix="/auth",
     tags=["Authentication"],
+)
+
+app.include_router(
+    InventoryRouter,
+    prefix="/inventory",
+    tags=["Inventory"],
 )
 
 if __name__ == "__main__":

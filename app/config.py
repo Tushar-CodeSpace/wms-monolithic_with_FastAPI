@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     MAX_LOGIN_ATTEMPTS: int = 5
     LOCKOUT_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     class Config:
         env_file = ".env"
