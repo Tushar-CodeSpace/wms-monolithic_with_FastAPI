@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from app.database import init_db
 from app.routers.auth_router import router as AuthRouter
 from app.routers.inventory_router import router as InventoryRouter
+from app.routers.chat_router import router as ChatRouter
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +36,12 @@ app.include_router(
 )
 
 app.include_router(
+    ChatRouter,
+    prefix="/chat",
+    tags=["Chat"],
+)
+
+app.include_router(
     InventoryRouter,
     prefix="/inventory",
     tags=["Inventory"],
@@ -44,5 +51,6 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         app="main:app",
+        port=8000,
         reload=True
     )

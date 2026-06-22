@@ -90,3 +90,17 @@ class AuthRepository:
             }}
         )
 
+    async def add_team(self, user_id: str, team: dict) -> bool:
+        # Check if user document exists
+        user_exists = await users_collection.find_one({"_id": user_id})
+        if not user_exists:
+            return False
+            
+        # Perform atomic update only if team is not already present
+        await users_collection.update_one(
+            {"_id": user_id, "teams._id": {"$ne": team["_id"]}},
+            {"$push": {"teams": team}}
+        )
+        return True
+
+

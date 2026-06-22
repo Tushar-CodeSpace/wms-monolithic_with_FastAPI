@@ -15,4 +15,5 @@ dependencies = [
     "tzdata>=2026.2",
     "motor>=3.7.1",
     "pyjwt>=2.13.0",
+    "websockets>=16.0",
 ]
