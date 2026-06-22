@@ -1,6 +1,8 @@
+from typing import List
 from fastapi import APIRouter, Depends, status, Request, Response, HTTPException
 from app.config import settings
 from app.schemas.auth_schema import RegisterRequest, RegisterResponse, LoginRequest, LoginResponse
+from app.schemas.user_schema import TeamSchema
 from app.services.auth_service import AuthService
 from app.dependencies.auth_deps import get_current_user
 
@@ -71,10 +73,38 @@ async def logout_user(
 # ─── EXAMPLE PROTECTED ROUTE ───
 @router.get("/me")
 async def get_protected_profile(
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service)
 ):
-    """Example route consuming your cache_repository system automatically"""
-    return {"user_id": current_user.get("sub"), "msg": "Token verified against blacklist successfully!"}
+    """Retrieves full user profile from database."""
+    user_id = current_user.get("sub")
+    user = await auth_service.repository.find_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    
+    return {
+        "id": user["_id"],
+        "name": user["name"],
+        "email": user["email"],
+        "roles": user.get("roles", ["user"]),
+        "permissions": user.get("permissions", []),
+        "teams": user.get("teams", []),
+        "is_active": user.get("is_active", True),
+        "is_account_verified": user.get("is_account_verified", False),
+        "created_at": user.get("created_at")
+    }
+
+@router.get("/teams", response_model=List[TeamSchema])
+async def get_user_teams(
+    current_user: dict = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Retrieves user's teams from database."""
+    user_id = current_user.get("sub")
+    user = await auth_service.repository.find_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    return user.get("teams", [])
 
 @router.post("/refresh")
 async def refresh_access_token(

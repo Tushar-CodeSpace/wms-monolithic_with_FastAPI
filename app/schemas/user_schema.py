@@ -7,6 +7,11 @@ class MFASchema(BaseModel):
     enabled: bool = False
     secret: Optional[str] = None
 
+class TeamSchema(BaseModel):
+    id: str = Field(alias="_id")
+    name: str
+    roles: List[str] = Field(default=[])
+
 class UserSchema(BaseModel):
     id: str = Field(alias="_id")
     name: str
@@ -20,6 +25,7 @@ class UserSchema(BaseModel):
     failed_login_attempts: int = 0
     lockout_until: Optional[datetime] = None
     mfa: MFASchema = Field(default_factory=MFASchema)
+    teams: List[TeamSchema] = Field(default=[])
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
