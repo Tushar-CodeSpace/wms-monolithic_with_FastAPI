@@ -15,13 +15,18 @@ async def register_user(
     response: Response,
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    created_user = await auth_service.register(payload)
+    register_response, refresh_token = await auth_service.register(payload)
     response.set_cookie(
-        key="access_token", value=f"Bearer {created_user.token}", httponly=True,
+        key="access_token", value=f"Bearer {register_response.token}", httponly=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60, expires=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax", secure=True
     )
-    return created_user
+    response.set_cookie(
+        key="refresh_token", value=refresh_token, httponly=True,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        samesite="lax", secure=True
+    )
+    return register_response
 
 @router.post("/login", status_code=status.HTTP_200_OK, response_model=LoginResponse)
 async def login_user(
